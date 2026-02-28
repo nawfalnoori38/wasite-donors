@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>سجل متبرعين محافظة واسط</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#b71c1c">
+
+<style>
+body{
+  font-family: Arial;
+  background:#f5f5f5;
+  padding:20px
+}
+h2{color:#b71c1c}
+.box{
+  background:#fff;
+  padding:20px;
+  border-radius:12px;
+  max-width:420px;
+  margin:auto;
+  box-shadow:0 10px 25px rgba(0,0,0,.15)
+}
+label{margin-top:10px;display:block}
+input,select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ccc;
+  margin-top:5px
+}
+button{
+  margin-top:15px;
+  width:100%;
+  padding:12px;
+  background:#b71c1c;
+  color:#fff;
+  border:0;
+  border-radius:10px;
+  cursor:pointer
+}
+.card{
+  border:1px solid #ddd;
+  padding:10px;
+  margin-top:8px;
+  border-radius:6px
+}
+</style>
+</head>
+
+<body>
+
+<!-- شاشة الدخول -->
+<div id="loginBox" style="position:fixed;inset:0;background:#f5f5f5;display:flex;align-items:center;justify-content:center;z-index:9999">
+  <div class="box">
+    <h3 style="color:#b71c1c">الدخول</h3>
+    <input type="password" id="pagePassword" placeholder="كلمة المرور">
+    <button onclick="checkPagePassword()">دخول</button>
+    <p id="loginMsg" style="color:red"></p>
+  </div>
+</div>
+
+<div id="mainContent" style="display:none">
+
+<div style="text-align:center;margin-bottom:20px">
+  <img src="wasit-logo.jpg" style="width:110px;border-radius:50%">
+  <h2>سجل متبرعين محافظة واسط</h2>
+</div>
+
+<div class="box">
+<h3>تسجيل متبرع</h3>
+
+<label>الاسم الكامل *</label>
+<input id="name">
+
+<label>رقم الهاتف *</label>
+<input id="phone">
+
+<label>فصيلة الدم *</label>
+<select id="blood">
+<option value="">اختر</option>
+<option>A+</option><option>A-</option>
+<option>B+</option><option>B-</option>
+<option>AB+</option><option>AB-</option>
+<option>O+</option><option>O-</option>
+</select>
+<label>مركز التبرع</label>
+<select id="bloodCenter">
+  <option value="">اختر مركز التبرع</option>
+  <option>مركز تبرع الكوت</option>
+  <option>مركز تبرع الحي</option>
+  <option>مركز تبرع النعمانية</option>
+  <option>مركز تبرع العزيزية</option>
+  <option>مركز تبرع الصويرة</option>
+</select>
+
+<label>المنطقة</label>
+<input id="area">
+
+<label>تاريخ آخر تبرع</label>
+<input type="date" id="last">
+
+<button onclick="saveDonor()">تسجيل</button>
+<p id="msg"></p>
+
+<hr>
+
+<button onclick="toggleSearch()">🔎 البحث عن متبرعين</button>
+<div id="searchBox" style="display:none">
+  <input id="searchName" placeholder="الاسم أو فصيلة الدم (A+, O- ...)">
+  <button onclick="searchDonors()">بحث</button>
+  <div id="results"></div>
+</div>
+
+<hr>
+
+<button style="background:#1565c0" onclick="openLab()">🧪 دخول المختبر</button>
+
+<div id="labBox" style="display:none">
+
+<label>كلمة مرور المختبر</label>
+<input type="password" id="labPassword">
+<button onclick="loginLab()">دخول</button>
+
+<div id="labForm" style="display:none">
+
+<label>اسم المتبرع (كما في السجل)</label>
+<input id="labName">
+
+<label>HIV</label>
+<select id="HIV"><option>غير مفحوص</option><option>سلبي</option><option>إيجابي</option></select>
+
+<label>HCV</label>
+<select id="HCV"><option>غير مفحوص</option><option>سلبي</option><option>إيجابي</option></select>
+
+<label>TPHA</label>
+<select id="TPHA"><option>غير مفحوص</option><option>سلبي</option><option>إيجابي</option></select>
+
+<label>HBsAg</label>
+<select id="HBsAg"><option>غير مفحوص</option><option>سلبي</option><option>إيجابي</option></select>
+
+<label>HBcAb</label>
+<select id="HBcAb"><option>غير مفحوص</option><option>سلبي</option><option>إيجابي</option></select>
+
+<label>ملاحظات المختبر</label>
+<input id="labNotes">
+
+<button onclick="saveLab()">💾 حفظ الفحوصات</button>
+<p id="labMsg"></p>
+
+</div>
+</div>
+
+</div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbxXhxFJ83eC03Zy6AgwQkM72BI-lQy5RB75n8pKhUx6riMH3RCH_H8SiF1JeF50m9cNHw/exec";
+const PAGE_PASSWORD="khnzs";
+const LAB_PASSWORD="lab123";
+
+function checkPagePassword(){
+
+  const input = document.getElementById("pagePassword").value.trim();
+  const loginBox = document.getElementById("loginBox");
+  const mainContent = document.getElementById("mainContent");
+  const msg = document.getElementById("loginMsg");
+
+  if(input === ""){
+    msg.innerText = "⚠️ أدخل كلمة المرور";
+    return;
+  }
+
+  if(input !== PAGE_PASSWORD){
+    msg.innerText = "❌ كلمة المرور غير صحيحة";
+    return;
+  }
+
+  // نجاح الدخول
+  loginBox.style.display = "none";
+  mainContent.style.display = "block";
+}
+
+
+async function saveDonor(){
+
+  const nameVal   = document.getElementById("name").value.trim();
+  const phoneVal  = document.getElementById("phone").value.trim();
+  const bloodVal  = document.getElementById("blood").value;
+  const centerVal = document.getElementById("bloodCenter").value;
+  const areaVal   = document.getElementById("area").value.trim();
+  const lastVal   = document.getElementById("last").value;
+
+  if(!nameVal || !phoneVal || !bloodVal || !centerVal){
+    document.getElementById("msg").innerText =
+      "❌ يرجى ملء الحقول المطلوبة";
+    return;
+  }
+
+  const data = {
+    "الاسم": nameVal,
+    "رقم الهاتف": phoneVal,
+    "فصيلة الدم": bloodVal,
+    "مركز التبرع": centerVal,
+    "المنطقة": areaVal,
+    "آخر تبرع": lastVal
+  };
+
+  await fetch(API_URL,{
+    method: "POST",
+    body: JSON.stringify(data)
+  });
+
+  document.getElementById("msg").innerText =
+    "✅ تم التسجيل بنجاح";
+
+  // تفريغ الحقول
+  document.getElementById("name").value = "";
+  document.getElementById("phone").value = "";
+  document.getElementById("blood").selectedIndex = 0;
+  document.getElementById("bloodCenter").selectedIndex = 0;
+  document.getElementById("area").value = "";
+  document.getElementById("last").value = "";
+}
+
+
+
+function toggleSearch(){
+  searchBox.style.display=searchBox.style.display==="none"?"block":"none";
+}
+async function searchDonors(){
+
+  const res = await fetch(API_URL);
+  const data = await res.json();
+  results.innerHTML = "";
+
+  const query = document
+    .getElementById("searchName")
+    .value
+    .trim()
+    .toUpperCase();
+
+  let found = false;
+
+  data.forEach(d => {
+
+    const name  = (d["الاسم"] || "").toUpperCase();
+    const blood = (d["فصيلة الدم"] || "").toUpperCase();
+
+    if(query && (name.includes(query) || blood === query)){
+      found = true;
+
+      const phone = d["رقم الهاتف"] || "";
+
+      let statusColor = "#555";
+      if(d["حالة التبرع"]?.includes("صالح")) statusColor = "#2e7d32";
+      if(d["حالة التبرع"]?.includes("غير صالح")) statusColor = "#c62828";
+      if(d["حالة التبرع"]?.includes("قيد")) statusColor = "#f9a825";
+
+      results.innerHTML += `
+        <div class="card">
+
+          <strong>${d["الاسم"]}</strong><br>
+          🩸 <b>الفصيلة:</b> ${d["فصيلة الدم"] || "-"}<br>
+          🏥 🏥 <b>مركز التبرع:</b> ${d["مركز التبرع"] || "-"}<br>
+          📍 <b>المنطقة:</b> ${d["المنطقة"] || "-"}<br>
+          📞 <b>الهاتف:</b> ${phone}<br>
+          🕒 <b>آخر تبرع:</b> ${formatDate(d["آخر تبرع"])}<br>
+          🗓️ <b>تاريخ التسجيل:</b> ${formatDate(d["تاريخ التسجيل"])}<br>
+
+          <hr>
+
+          🧪 <b>الفحوصات المختبرية</b><br>
+          HIV: ${d["HIV"] || "-"} |
+          HCV: ${d["HCV"] || "-"} |
+          TPHA: ${d["TPHA"] || "-"}<br>
+          HBsAg: ${d["HBsAg"] || "-"} |
+          HBcAb: ${d["HBcAb"] || "-"}<br>
+
+          📝 <b>ملاحظات:</b> ${d["ملاحظات المختبر"] || "لا توجد"}<br>
+          🧪 <b>تاريخ الفحص:</b> ${formatDate(d["تاريخ الفحص"])}<br>
+
+          ⚖️ <b>الحالة:</b>
+          <span style="color:${statusColor};font-weight:bold">
+            ${d["حالة التبرع"] || "-"}
+          </span>
+
+          <br><br>
+
+          <a href="tel:${phone}"
+             style="background:#2e7d32;color:#fff;padding:6px 10px;border-radius:4px;text-decoration:none">
+            📞 اتصال
+          </a>
+
+          <a href="https://wa.me/${phone}" target="_blank"
+             style="background:#25D366;color:#fff;padding:6px 10px;border-radius:4px;text-decoration:none;margin-right:6px">
+            💬 واتساب
+          </a>
+
+          <br><br>
+
+          <!-- تعديل بيانات المتبرع -->
+          <button
+  onclick="openEdit(
+    '${d["الاسم"]}',
+    '${phone}',
+    '${d["فصيلة الدم"]}',
+    '${d["مركز التبرع"]}',
+    '${d["المنطقة"]}',
+    '${d["آخر تبرع"] || ""}'
+  )"
+  style="background:#1565c0;color:#fff;border:0;padding:6px 10px;border-radius:4px">
+  ✏️ تعديل بيانات المتبرع
+</button>
+
+          <br><br>
+
+          <!-- تعديل نتائج المختبر -->
+          <button
+            onclick="openLabEdit(
+              '${d["الاسم"]}',
+              '${d["HIV"] || ""}',
+              '${d["HCV"] || ""}',
+              '${d["TPHA"] || ""}',
+              '${d["HBsAg"] || ""}',
+              '${d["HBcAb"] || ""}',
+              '${d["ملاحظات المختبر"] || ""}'
+            )"
+            style="background:#6a1b9a;color:#fff;border:0;padding:6px 10px;border-radius:4px">
+            🧪 تعديل نتائج المختبر
+          </button>
+
+        </div>
+      `;
+    }
+  });
+
+  if(!found){
+    results.innerHTML = "❌ لا توجد نتائج مطابقة";
+  }
+}
+
+function openLab(){labBox.style.display="block";}
+function loginLab(){
+  if(labPassword.value!==LAB_PASSWORD){alert("❌ خطأ");return;}
+  labForm.style.display="block";
+}
+
+async function saveLab(){
+  await fetch(API_URL,{method:"POST",body:JSON.stringify({
+    "الاسم":labName.value.trim(),
+    "HIV":HIV.value,
+    "HCV":HCV.value,
+    "TPHA":TPHA.value,
+    "HBsAg":HBsAg.value,
+    "HBcAb":HBcAb.value,
+    "ملاحظات المختبر":labNotes.value
+  })});
+  labMsg.innerText="✅ تم حفظ نتائج المختبر";
+}
+function openEdit(name, phone, blood, center, area, last){
+  editBox.style.display = "flex";
+  editName.value   = name;
+  editPhone.value  = phone;
+  editBlood.value  = blood;
+  editCenter.value = center;
+  editArea.value   = area;
+  editLast.value   = last || "";
+}
+
+function closeEdit(){
+  editBox.style.display = "none";
+}
+
+async function saveEdit(){
+  const data = {
+    "الاسم": editName.value,
+    "رقم الهاتف": editPhone.value,
+    "فصيلة الدم": editBlood.value,
+    "مركز التبرع": editCenter.value,
+    "المنطقة": editArea.value,
+    "آخر تبرع": editLast.value,
+    "تعديل": true
+  };
+
+  await fetch(API_URL,{
+    method:"POST",
+    body:JSON.stringify(data)
+  });
+
+  editMsg.innerText = "✅ تم تحديث البيانات بنجاح";
+}
+function openLabEdit(name, hiv, hcv, tpha, hbs, hbc, notes){
+  labEditBox.style.display = "flex";
+
+  editLabName.value = name;
+  editHIV.value     = hiv || "غير مفحوص";
+  editHCV.value     = hcv || "غير مفحوص";
+  editTPHA.value    = tpha || "غير مفحوص";
+  editHBsAg.value   = hbs || "غير مفحوص";
+  editHBcAb.value   = hbc || "غير مفحوص";
+  editLabNotes.value= notes || "";
+}
+
+function closeLabEdit(){
+  labEditBox.style.display = "none";
+}
+
+async function saveLabEdit(){
+  const body = {
+    "الاسم": editLabName.value,
+    "HIV": editHIV.value,
+    "HCV": editHCV.value,
+    "TPHA": editTPHA.value,
+    "HBsAg": editHBsAg.value,
+    "HBcAb": editHBcAb.value,
+    "ملاحظات المختبر": editLabNotes.value
+  };
+
+  await fetch(API_URL,{
+    method:"POST",
+    body: JSON.stringify(body)
+  });
+
+  labEditMsg.innerText = "✅ تم تحديث نتائج المختبر";
+}
+function formatDate(dateStr){
+  if(!dateStr) return "-";
+
+  const d = new Date(dateStr);
+
+  return d.toLocaleString("ar-IQ", {
+    timeZone: "Asia/Baghdad",
+    weekday: "long",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+</script>
+<!-- نافذة تعديل المتبرع -->
+<div id="editBox" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  align-items:center;
+  justify-content:center;
+  z-index:9999
+">
+  <div class="box">
+    <h3>✏️ تعديل بيانات المتبرع</h3>
+
+    <input type="hidden" id="editName">
+
+    <label>رقم الهاتف</label>
+    <input id="editPhone">
+
+    <label>فصيلة الدم</label>
+    <select id="editBlood">
+      <option>A+</option><option>A-</option>
+      <option>B+</option><option>B-</option>
+      <option>AB+</option><option>AB-</option>
+      <option>O+</option><option>O-</option>
+    </select>
+
+    <label>مصرف الدم</label>
+    <select id="editCenter">
+      <option>مصرف دم الكوت</option>
+      <option>مصرف دم الحي</option>
+      <option>مصرف دم النعمانية</option>
+      <option>مصرف دم العزيزية</option>
+      <option>مصرف دم الصويرة</option>
+    </select>
+
+    <label>المنطقة</label>
+    <input id="editArea">
+
+    <label>آخر تبرع</label>
+    <input type="date" id="editLast">
+
+    <button onclick="saveEdit()">💾 حفظ التعديل</button>
+    <button onclick="closeEdit()" style="background:#777">إلغاء</button>
+
+    <p id="editMsg"></p>
+  </div>
+</div>
+
+<footer style="margin-top:40px;text-align:center;color:#555">
+© 2026 — NAWFAL NOORI
+</footer>
+<div id="labEditBox" style="
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.4);
+  align-items:center;
+  justify-content:center;
+  z-index:9999
+">
+  <div class="box">
+    <h3>🧪 تعديل نتائج المختبر</h3>
+
+    <input type="hidden" id="editLabName">
+
+    <label>HIV</label>
+    <select id="editHIV">
+      <option>غير مفحوص</option>
+      <option>سلبي</option>
+      <option>إيجابي</option>
+    </select>
+
+    <label>HCV</label>
+    <select id="editHCV">
+      <option>غير مفحوص</option>
+      <option>سلبي</option>
+      <option>إيجابي</option>
+    </select>
+
+    <label>TPHA</label>
+    <select id="editTPHA">
+      <option>غير مفحوص</option>
+      <option>سلبي</option>
+      <option>إيجابي</option>
+    </select>
+
+    <label>HBsAg</label>
+    <select id="editHBsAg">
+      <option>غير مفحوص</option>
+      <option>سلبي</option>
+      <option>إيجابي</option>
+    </select>
+
+    <label>HBcAb</label>
+    <select id="editHBcAb">
+      <option>غير مفحوص</option>
+      <option>سلبي</option>
+      <option>إيجابي</option>
+    </select>
+
+    <label>ملاحظات المختبر</label>
+    <input id="editLabNotes">
+
+    <button onclick="saveLabEdit()">💾 حفظ التعديل</button>
+    <button onclick="closeLabEdit()" style="background:#777">إلغاء</button>
+
+    <p id="labEditMsg"></p>
+  </div>
+</div>
+
+</body>
+</html>
